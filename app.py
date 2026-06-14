@@ -11,7 +11,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-1.5-flash"
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     + GEMINI_MODEL
@@ -84,7 +84,12 @@ def gemini_request(system, parts, max_tokens=4096):
         if resp.status_code == 429 and attempt < len(delays) - 1:
             time.sleep(delay)
             continue
-        resp.raise_for_status()
+        if not resp.ok:
+            try:
+                detail = resp.json()
+            except Exception:
+                detail = resp.text
+            raise Exception("Gemini API error {}: {}".format(resp.status_code, detail))
         return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
