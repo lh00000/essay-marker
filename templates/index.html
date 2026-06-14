@@ -358,6 +358,104 @@
       .scores-row { flex-direction: column; }
       header h1 { font-size: 1.1rem; }
     }
+
+    /* ── DASHBOARD ── */
+    .dash-empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #94a3b8;
+    }
+    .dash-empty svg { margin-bottom: 0.75rem; color: #cbd5e1; }
+    .dash-empty p { font-size: 0.95rem; }
+
+    .dash-stats {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .dash-stat {
+      flex: 1;
+      background: #f8faff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      text-align: center;
+    }
+    .dash-stat .ds-val { font-size: 1.6rem; font-weight: 800; color: #1e40af; }
+    .dash-stat .ds-label { font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; }
+
+    .dash-section { margin-bottom: 1.5rem; }
+
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .history-table th {
+      text-align: left;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #64748b;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .history-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: #f8faff; }
+    .score-pill {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+    .pill-green  { background: #dcfce7; color: #166534; }
+    .pill-amber  { background: #fef9c3; color: #854d0e; }
+    .pill-red    { background: #fee2e2; color: #991b1b; }
+
+    .bar-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+    .bar-label { width: 72px; font-size: 0.82rem; color: #475569; text-align: right; flex-shrink: 0; }
+    .bar-track { flex: 1; background: #f1f5f9; border-radius: 20px; height: 16px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 20px; transition: width 0.4s; }
+    .bar-count { width: 28px; font-size: 0.8rem; color: #64748b; flex-shrink: 0; }
+
+    .recurring-list { list-style: none; }
+    .recurring-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.88rem;
+      color: #334155;
+    }
+    .recurring-list li:last-child { border-bottom: none; }
+    .rec-count {
+      flex-shrink: 0;
+      background: #eff6ff;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 0.78rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 20px;
+      margin-top: 1px;
+    }
+    .rec-type {
+      flex-shrink: 0;
+      font-size: 0.72rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 20px;
+      margin-top: 1px;
+    }
+
+    .btn-danger {
+      padding: 0.45rem 1rem;
+      background: none;
+      border: 1.5px solid #fca5a5;
+      color: #dc2626;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-danger:hover { background: #fef2f2; }
   </style>
 </head>
 <body>
@@ -389,6 +487,7 @@
       <div class="tab-bar">
         <button class="tab-btn active" data-tab="type">Type Essay</button>
         <button class="tab-btn" data-tab="upload">Upload / Scan</button>
+        <button class="tab-btn" data-tab="dashboard">Dashboard</button>
       </div>
 
       <!-- Type tab -->
@@ -420,6 +519,56 @@
         <div id="ocr-textarea-wrap">
           <label for="ocr-textarea">Extracted text — edit if needed before marking:</label>
           <textarea id="ocr-textarea" style="min-height:220px;" placeholder="Extracted text will appear here…"></textarea>
+        </div>
+      </div>
+
+      <!-- Dashboard tab -->
+      <div id="tab-dashboard" class="tab-panel">
+        <div id="dash-empty" class="dash-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          <p>No essays marked yet.</p>
+          <p style="margin-top:0.3rem;font-size:0.82rem;">Mark your first essay to start tracking progress.</p>
+        </div>
+        <div id="dash-content" style="display:none;">
+          <!-- Summary stats -->
+          <div class="dash-stats">
+            <div class="dash-stat"><div class="ds-val" id="ds-count">0</div><div class="ds-label">Essays Marked</div></div>
+            <div class="dash-stat"><div class="ds-val" id="ds-avg">0</div><div class="ds-label">Avg Score /36</div></div>
+            <div class="dash-stat"><div class="ds-val" id="ds-trend">—</div><div class="ds-label">Trend</div></div>
+          </div>
+
+          <!-- Error breakdown -->
+          <div class="dash-section">
+            <div class="section-title">Error Breakdown</div>
+            <div id="error-bars"></div>
+          </div>
+
+          <!-- Recurring issues -->
+          <div class="dash-section">
+            <div class="section-title">Top Recurring Issues</div>
+            <ul class="recurring-list" id="recurring-list"></ul>
+          </div>
+
+          <!-- Score history -->
+          <div class="dash-section">
+            <div class="section-title">Score History</div>
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Date</th><th>Question</th>
+                  <th>Content</th><th>Language</th><th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody"></tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:1rem;text-align:right;">
+            <button class="btn-danger" id="btn-clear-history">Clear History</button>
+          </div>
         </div>
       </div>
 
@@ -537,6 +686,11 @@
       document.querySelectorAll('.tab-panel').forEach(p =>
         p.classList.toggle('active', p.id === `tab-${btn.dataset.tab}`)
       );
+      // Hide question field and mark button on Dashboard tab
+      const isDash = btn.dataset.tab === 'dashboard';
+      document.querySelector('.question-wrap').style.display = isDash ? 'none' : '';
+      btnMark.style.display = isDash ? 'none' : '';
+      if (isDash) renderDashboard();
     });
   });
 
@@ -610,6 +764,7 @@
       .then(data => {
         if (data.success) {
           state.markingResult = data.result;
+          saveToHistory(state.questionText, data.result);
           renderResults(data.result);
           showView('results');
         } else {
@@ -826,6 +981,135 @@
   });
 
   function hideTooltip() { tooltip.style.display = 'none'; }
+
+  // ── Dashboard: localStorage persistence ───────────────────────────────────
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem('essay_marker_history') || '[]'); }
+    catch { return []; }
+  }
+
+  function saveToHistory(question, result) {
+    const history = loadHistory();
+    history.push({
+      id: Date.now(),
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      question: question || '',
+      scores: result.scores,
+      issues: (result.issues || []).map(i => ({ type: i.type, severity: i.severity, explanation: i.explanation })),
+    });
+    if (history.length > 100) history.splice(0, history.length - 100);
+    localStorage.setItem('essay_marker_history', JSON.stringify(history));
+  }
+
+  // ── Dashboard: render ──────────────────────────────────────────────────────
+  function renderDashboard() {
+    const history = loadHistory();
+    const empty   = document.getElementById('dash-empty');
+    const content = document.getElementById('dash-content');
+
+    if (history.length === 0) {
+      empty.style.display = 'block';
+      content.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    content.style.display = 'block';
+
+    // ── Summary stats
+    const avg = Math.round(history.reduce((s, e) => s + e.scores.total, 0) / history.length);
+    document.getElementById('ds-count').textContent = history.length;
+    document.getElementById('ds-avg').textContent   = avg;
+
+    // Trend: compare last 3 vs previous 3
+    let trendText = '—', trendColor = '#64748b';
+    if (history.length >= 2) {
+      const recent = history.slice(-3).reduce((s, e) => s + e.scores.total, 0) / Math.min(3, history.length);
+      const older  = history.length >= 4
+        ? history.slice(-6, -3).reduce((s, e) => s + e.scores.total, 0) / Math.min(3, history.length - 3)
+        : history[0].scores.total;
+      const diff = recent - older;
+      if (diff > 0.5)       { trendText = '↑ Improving'; trendColor = '#059669'; }
+      else if (diff < -0.5) { trendText = '↓ Declining'; trendColor = '#dc2626'; }
+      else                  { trendText = '→ Steady';    trendColor = '#d97706'; }
+    }
+    const trendEl = document.getElementById('ds-trend');
+    trendEl.textContent  = trendText;
+    trendEl.style.color  = trendColor;
+    trendEl.style.fontSize = '1rem';
+
+    // ── Error breakdown bar chart
+    const typeColors = { language: '#fca5a5', logic: '#fde68a', flow: '#bfdbfe', content: '#bbf7d0' };
+    const typeDark   = { language: '#991b1b', logic: '#78350f', flow: '#1e3a8a', content: '#14532d' };
+    const typeCounts = { language: 0, flow: 0, logic: 0, content: 0 };
+    history.forEach(e => (e.issues || []).forEach(i => { if (i.type in typeCounts) typeCounts[i.type]++; }));
+    const maxCount = Math.max(...Object.values(typeCounts), 1);
+    const barsEl = document.getElementById('error-bars');
+    barsEl.innerHTML = '';
+    Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
+      const pct = Math.round((count / maxCount) * 100);
+      barsEl.innerHTML += `
+        <div class="bar-row">
+          <div class="bar-label" style="color:${typeDark[type]}">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;background:${typeColors[type]};"></div>
+          </div>
+          <div class="bar-count">${count}</div>
+        </div>`;
+    });
+
+    // ── Recurring issues
+    const issueMap = {};
+    history.forEach(e => (e.issues || []).forEach(i => {
+      const key = i.type + '||' + i.explanation;
+      if (!issueMap[key]) issueMap[key] = { type: i.type, text: i.explanation, count: 0 };
+      issueMap[key].count++;
+    }));
+    const top5 = Object.values(issueMap).sort((a, b) => b.count - a.count).slice(0, 5);
+    const recEl = document.getElementById('recurring-list');
+    recEl.innerHTML = '';
+    if (top5.length === 0) {
+      recEl.innerHTML = '<li style="color:#94a3b8;font-size:0.85rem;">No recurring issues yet.</li>';
+    } else {
+      top5.forEach(item => {
+        const tagBg   = typeColors[item.type] || '#e2e8f0';
+        const tagColor = typeDark[item.type]  || '#334155';
+        recEl.innerHTML += `
+          <li>
+            <span class="rec-count">×${item.count}</span>
+            <span class="rec-type" style="background:${tagBg};color:${tagColor};">${item.type}</span>
+            <span>${escapeHTML(item.text)}</span>
+          </li>`;
+      });
+    }
+
+    // ── Score history table (newest first)
+    const tbody = document.getElementById('history-tbody');
+    tbody.innerHTML = '';
+    [...history].reverse().forEach((entry, idx) => {
+      const t = entry.scores.total;
+      const pillClass = t >= 26 ? 'pill-green' : t >= 18 ? 'pill-amber' : 'pill-red';
+      const qDisplay  = entry.question
+        ? (entry.question.length > 38 ? entry.question.slice(0, 35) + '…' : entry.question)
+        : '<span style="color:#94a3b8;">—</span>';
+      tbody.innerHTML += `
+        <tr>
+          <td style="color:#94a3b8;">${history.length - idx}</td>
+          <td style="white-space:nowrap;">${entry.date}</td>
+          <td>${qDisplay}</td>
+          <td>${entry.scores.content}/18</td>
+          <td>${entry.scores.language}/18</td>
+          <td><span class="score-pill ${pillClass}">${t}/36</span></td>
+        </tr>`;
+    });
+  }
+
+  // ── Clear history ──────────────────────────────────────────────────────────
+  document.getElementById('btn-clear-history').addEventListener('click', () => {
+    if (confirm('Clear all marking history? This cannot be undone.')) {
+      localStorage.removeItem('essay_marker_history');
+      renderDashboard();
+    }
+  });
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function showError(msg) {
