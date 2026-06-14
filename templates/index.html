@@ -294,6 +294,66 @@
     }
     .error-msg.visible { display: block; }
 
+    /* ── QUESTION FIELD ── */
+    .question-wrap {
+      margin-bottom: 1.25rem;
+    }
+    .question-wrap label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 0.4rem;
+    }
+    .question-wrap input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      font-family: inherit;
+      color: #1e293b;
+      transition: border-color 0.15s;
+    }
+    .question-wrap input:focus { border-color: #1e40af; }
+    .question-wrap input::placeholder { color: #94a3b8; }
+
+    /* ── QUESTION ANALYSIS CARD ── */
+    .qa-card {
+      background: #f8faff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .qa-theme {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 0.6rem;
+    }
+    .qa-reqs {
+      list-style: none;
+      margin-bottom: 0.75rem;
+    }
+    .qa-reqs li {
+      font-size: 0.88rem;
+      color: #334155;
+      padding: 0.2rem 0;
+      display: flex;
+      gap: 0.4rem;
+    }
+    .qa-reqs li::before { content: "•"; color: #3b82f6; font-weight: 700; }
+    .qa-verdict {
+      font-size: 0.88rem;
+      color: #1e40af;
+      background: #eff6ff;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      line-height: 1.5;
+    }
+
     @media (max-width: 560px) {
       .scores-row { flex-direction: column; }
       header h1 { font-size: 1.1rem; }
@@ -319,6 +379,13 @@
   <!-- INPUT VIEW -->
   <div id="view-input" class="view active">
     <div class="card">
+
+      <!-- Shared question field -->
+      <div class="question-wrap">
+        <label for="question-input">Essay Question / Theme <span style="font-weight:400;color:#94a3b8;">(optional but recommended)</span></label>
+        <input type="text" id="question-input" placeholder="e.g. Write a story about a time you helped a friend in need." />
+      </div>
+
       <div class="tab-bar">
         <button class="tab-btn active" data-tab="type">Type Essay</button>
         <button class="tab-btn" data-tab="upload">Upload / Scan</button>
@@ -389,6 +456,16 @@
         </div>
       </div>
 
+      <!-- Question analysis (shown only when question was provided) -->
+      <div id="qa-section" style="display:none;">
+        <div class="section-title">Question Analysis</div>
+        <div class="qa-card">
+          <div class="qa-theme" id="qa-theme"></div>
+          <ul class="qa-reqs" id="qa-reqs"></ul>
+          <div class="qa-verdict" id="qa-verdict"></div>
+        </div>
+      </div>
+
       <div class="section-title">Teacher's Comment</div>
       <div class="overall-box" id="overall-comment"></div>
 
@@ -423,6 +500,7 @@
     currentView: 'input',   // 'input' | 'loading' | 'results'
     inputMode: 'type',      // 'type' | 'upload'
     essayText: '',
+    questionText: '',
     markingResult: null,
   };
 
@@ -440,9 +518,10 @@
   const dropZone      = document.getElementById('drop-zone');
   const imagePreview  = document.getElementById('image-preview');
   const imagePreviewWrap = document.getElementById('image-preview-wrap');
-  const btnMark       = document.getElementById('btn-mark');
-  const inputError    = document.getElementById('input-error');
-  const tooltip       = document.getElementById('tooltip');
+  const btnMark        = document.getElementById('btn-mark');
+  const inputError     = document.getElementById('input-error');
+  const tooltip        = document.getElementById('tooltip');
+  const questionInput  = document.getElementById('question-input');
 
   // ── Render ─────────────────────────────────────────────────────────────────
   function showView(name) {
@@ -518,13 +597,14 @@
     if (!text) { showError('Please enter or upload an essay first.'); return; }
 
     state.essayText = text;
+    state.questionText = questionInput.value.trim();
     showError('');
     showView('loading');
 
     fetch('/mark', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ essay: text }),
+      body: JSON.stringify({ essay: text, question: state.questionText }),
     })
       .then(r => r.json())
       .then(data => {
@@ -549,6 +629,7 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'type'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-type'));
     essayTextarea.value = state.essayText;
+    questionInput.value = state.questionText;
     showView('input');
   });
 
@@ -567,6 +648,24 @@
     colourBadge('badge-content',  c, 18);
     colourBadge('badge-language', l, 18);
     colourBadge('badge-total',    t, 36);
+
+    // Question analysis
+    const qa = result.question_analysis;
+    const qaSection = document.getElementById('qa-section');
+    if (qa && state.questionText) {
+      document.getElementById('qa-theme').textContent = 'Theme: ' + (qa.theme || '');
+      const reqList = document.getElementById('qa-reqs');
+      reqList.innerHTML = '';
+      (qa.key_requirements || []).forEach(r => {
+        const li = document.createElement('li');
+        li.textContent = r;
+        reqList.appendChild(li);
+      });
+      document.getElementById('qa-verdict').textContent = qa.relevance_verdict || '';
+      qaSection.style.display = 'block';
+    } else {
+      qaSection.style.display = 'none';
+    }
 
     // Comment
     document.getElementById('overall-comment').textContent = result.overall_comment || '';

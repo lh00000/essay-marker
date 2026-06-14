@@ -140,13 +140,41 @@ def mark():
             return jsonify({"success": False, "error": "Essay text is required"}), 400
 
         essay = data["essay"].strip()
+        question = data.get("question", "").strip()
+
+        question_block = ""
+        question_schema = ""
+        question_rules = ""
+        if question:
+            question_block = (
+                "ESSAY QUESTION / THEME:\n"
+                '"""\n' + question + '\n"""\n\n'
+                "Before marking, dissect this question to identify:\n"
+                "1. The core theme or topic the student must address\n"
+                "2. The specific requirements or expectations implied by the question\n"
+                "3. How well the submitted essay actually addresses the question\n\n"
+            )
+            question_schema = (
+                '  "question_analysis": {\n'
+                '    "theme": "<core theme or topic in 3-8 words>",\n'
+                '    "key_requirements": ["<requirement 1>", "<requirement 2>", "<requirement 3>"],\n'
+                '    "relevance_verdict": "<1-2 sentences on how well the essay addressed the question>"\n'
+                "  },\n"
+            )
+            question_rules = (
+                '- "question_analysis.key_requirements" should list 2-4 specific things the question expects\n'
+                '- "question_analysis.relevance_verdict" must be honest — if the essay missed the point, say so clearly\n'
+                "- Use the question context to sharpen content issue explanations (e.g. flag when the essay ignores the stated theme)\n"
+            )
 
         user_message = (
             "Mark the following PSLE English Continuous Writing composition.\n\n"
-            'ESSAY:\n"""\n' + essay + '\n"""\n\n'
+            + question_block
+            + 'ESSAY:\n"""\n' + essay + '\n"""\n\n'
             "Respond with a JSON object in this EXACT schema - no other text:\n"
             "{\n"
-            '  "scores": {\n'
+            + question_schema
+            + '  "scores": {\n'
             '    "content": <integer 0-18>,\n'
             '    "language": <integer 0-18>,\n'
             '    "total": <integer 0-36>\n'
@@ -165,7 +193,8 @@ def mark():
             '  "overall_comment": "<2-3 sentence holistic comment a teacher would write>"\n'
             "}\n\n"
             "Rules:\n"
-            '- "snippet" must be a verbatim excerpt from the essay (used for text highlighting)\n'
+            + question_rules
+            + '- "snippet" must be a verbatim excerpt from the essay (used for text highlighting)\n'
             '- "total" must equal "content" + "language"\n'
             "- Include 3-8 issues; do not flag trivial issues with severity low unless the essay is otherwise strong\n"
             '- "strengths" should have 2-4 items; "improvements" should have 2-4 items\n'
