@@ -2,6 +2,7 @@ import os
 import base64
 import json
 import re
+import time
 import requests
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
@@ -72,14 +73,19 @@ def gemini_request(system, parts, max_tokens=4096):
         "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"maxOutputTokens": max_tokens},
     }
-    resp = requests.post(
-        GEMINI_URL,
-        params={"key": api_key},
-        json=payload,
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    delays = [5, 15, 30]
+    for attempt, delay in enumerate(delays):
+        resp = requests.post(
+            GEMINI_URL,
+            params={"key": api_key},
+            json=payload,
+            timeout=120,
+        )
+        if resp.status_code == 429 and attempt < len(delays) - 1:
+            time.sleep(delay)
+            continue
+        resp.raise_for_status()
+        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def extract_json(text):
