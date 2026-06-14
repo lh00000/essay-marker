@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PSLE Essay Marker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1e40af;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.3px; }
+    header span { font-size: 0.85rem; opacity: 0.75; margin-left: auto; }
+
+    .container { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+
+    /* ── VIEWS ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── INPUT VIEW ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.75rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: 0.6rem 1.25rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: #64748b;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn.active { color: #1e40af; border-bottom-color: #1e40af; font-weight: 600; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    textarea {
+      width: 100%;
+      min-height: 340px;
+      padding: 0.85rem 1rem;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+      line-height: 1.65;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    textarea:focus { border-color: #1e40af; }
+    textarea::placeholder { color: #94a3b8; }
+
+    /* drop zone */
+    .drop-zone {
+      border: 2px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      color: #64748b;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #1e40af;
+      background: #eff6ff;
+    }
+    .drop-zone svg { margin-bottom: 0.75rem; color: #94a3b8; }
+    .drop-zone p { font-size: 0.95rem; }
+    .drop-zone strong { color: #1e40af; }
+
+    #image-preview-wrap { margin-top: 1rem; display: none; }
+    #image-preview { max-width: 100%; max-height: 260px; border-radius: 8px; border: 1px solid #e2e8f0; }
+
+    .ocr-status {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+    .ocr-status.visible { display: flex; }
+
+    #ocr-textarea-wrap { margin-top: 1rem; display: none; }
+    #ocr-textarea-wrap label { font-size: 0.85rem; color: #64748b; display: block; margin-bottom: 0.4rem; }
+
+    .btn-primary {
+      margin-top: 1.25rem;
+      width: 100%;
+      padding: 0.85rem;
+      background: #1e40af;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary:hover { background: #1d3fa5; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── LOADING VIEW ── */
+    #view-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 50vh;
+      gap: 1.25rem;
+      color: #475569;
+    }
+    #view-loading.active { display: flex; }
+
+    .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid #e2e8f0;
+      border-top-color: #1e40af;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESULTS VIEW ── */
+    .scores-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .score-badge {
+      flex: 1;
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      color: #fff;
+    }
+    .score-badge .label { font-size: 0.78rem; opacity: 0.88; text-transform: uppercase; letter-spacing: 0.5px; }
+    .score-badge .value { font-size: 2rem; font-weight: 800; margin: 0.15rem 0; }
+    .score-badge .denom { font-size: 0.8rem; opacity: 0.75; }
+    .badge-content { background: #059669; }
+    .badge-language { background: #2563eb; }
+    .badge-total { background: #7c3aed; }
+    .badge-amber { background: #d97706; }
+    .badge-red { background: #dc2626; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-bottom: 1.25rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+      color: #475569;
+    }
+    .legend-dot {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+    }
+
+    .essay-display {
+      background: #fafafa;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1.25rem;
+      font-size: 1rem;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-bottom: 1.5rem;
+      min-height: 120px;
+    }
+
+    mark[data-type="logic"]    { background: #fde68a; border-radius: 3px; cursor: pointer; padding: 1px 2px; }
+    mark[data-type="flow"]     { background: #bfdbfe; border-radius: 3px; cursor: pointer; padding: 1px 2px; }
+    mark[data-type="language"] { background: #fca5a5; border-radius: 3px; cursor: pointer; padding: 1px 2px; }
+    mark[data-type="content"]  { background: #bbf7d0; border-radius: 3px; cursor: pointer; padding: 1px 2px; }
+    mark:hover { filter: brightness(0.93); }
+
+    /* tooltip */
+    #tooltip {
+      position: fixed;
+      display: none;
+      background: #1e293b;
+      color: #f1f5f9;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      max-width: 320px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      z-index: 9999;
+      pointer-events: none;
+    }
+    #tooltip .tip-type {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.35rem;
+      opacity: 0.65;
+    }
+    #tooltip .tip-explanation { margin-bottom: 0.5rem; }
+    #tooltip .tip-suggestion {
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 0.4rem 0.6rem;
+      font-style: italic;
+    }
+    #tooltip .tip-label { font-size: 0.72rem; opacity: 0.65; margin-bottom: 0.2rem; }
+
+    .section-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #475569;
+      margin: 1.25rem 0 0.6rem;
+    }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .tag {
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .tag-green { background: #dcfce7; color: #166534; }
+    .tag-orange { background: #ffedd5; color: #9a3412; }
+
+    .overall-box {
+      background: #eff6ff;
+      border-left: 4px solid #1e40af;
+      border-radius: 0 8px 8px 0;
+      padding: 0.85rem 1rem;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #1e3a8a;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 0.85rem;
+      background: none;
+      color: #1e40af;
+      border: 2px solid #1e40af;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 0.5rem;
+    }
+    .btn-secondary:hover { background: #eff6ff; }
+
+    .error-msg {
+      background: #fef2f2;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      color: #991b1b;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    @media (max-width: 560px) {
+      .scores-row { flex-direction: column; }
+      header h1 { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>
+  <h1>PSLE Essay Marker</h1>
+  <span>AI-powered • Content + Language</span>
+</header>
+
+<div class="container">
+
+  <!-- INPUT VIEW -->
+  <div id="view-input" class="view active">
+    <div class="card">
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="type">Type Essay</button>
+        <button class="tab-btn" data-tab="upload">Upload / Scan</button>
+      </div>
+
+      <!-- Type tab -->
+      <div id="tab-type" class="tab-panel active">
+        <textarea id="essay-textarea" placeholder="Paste or type your essay here…"></textarea>
+      </div>
+
+      <!-- Upload tab -->
+      <div id="tab-upload" class="tab-panel">
+        <div class="drop-zone" id="drop-zone">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <p>Drag &amp; drop a photo here, or <strong>click to browse</strong></p>
+          <p style="font-size:0.8rem;margin-top:0.4rem;opacity:0.7">JPG · PNG · WEBP · GIF</p>
+        </div>
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
+
+        <div id="image-preview-wrap">
+          <img id="image-preview" alt="Essay preview" />
+        </div>
+
+        <div class="ocr-status" id="ocr-status">
+          <div class="spinner" style="width:20px;height:20px;border-width:3px;"></div>
+          <span>Extracting text from image…</span>
+        </div>
+
+        <div id="ocr-textarea-wrap">
+          <label for="ocr-textarea">Extracted text — edit if needed before marking:</label>
+          <textarea id="ocr-textarea" style="min-height:220px;" placeholder="Extracted text will appear here…"></textarea>
+        </div>
+      </div>
+
+      <div class="error-msg" id="input-error"></div>
+      <button class="btn-primary" id="btn-mark">Mark Essay</button>
+    </div>
+  </div>
+
+  <!-- LOADING VIEW -->
+  <div id="view-loading" class="view">
+    <div class="spinner"></div>
+    <p style="font-size:1.05rem;color:#475569;">Marking your essay…</p>
+    <p style="font-size:0.85rem;color:#94a3b8;">This usually takes 10–20 seconds</p>
+  </div>
+
+  <!-- RESULTS VIEW -->
+  <div id="view-results" class="view">
+    <div class="card">
+      <div class="scores-row">
+        <div class="score-badge badge-content" id="badge-content">
+          <div class="label">Content</div>
+          <div class="value" id="score-content">—</div>
+          <div class="denom">out of 18</div>
+        </div>
+        <div class="score-badge badge-language" id="badge-language">
+          <div class="label">Language</div>
+          <div class="value" id="score-language">—</div>
+          <div class="denom">out of 18</div>
+        </div>
+        <div class="score-badge badge-total" id="badge-total">
+          <div class="label">Total</div>
+          <div class="value" id="score-total">—</div>
+          <div class="denom">out of 36</div>
+        </div>
+      </div>
+
+      <div class="section-title">Teacher's Comment</div>
+      <div class="overall-box" id="overall-comment"></div>
+
+      <div class="section-title">Highlighted Essay</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#fca5a5;"></div>Language</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fde68a;"></div>Logic</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#bfdbfe;"></div>Flow</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#bbf7d0;"></div>Content</div>
+        <div style="font-size:0.8rem;color:#94a3b8;margin-left:auto;align-self:center;">Click a highlight for details</div>
+      </div>
+      <div class="essay-display" id="essay-display"></div>
+
+      <div class="section-title">Strengths</div>
+      <div class="tag-list" id="strengths-list"></div>
+
+      <div class="section-title">Key Improvements</div>
+      <div class="tag-list" id="improvements-list"></div>
+
+      <button class="btn-secondary" id="btn-recheck">Edit &amp; Recheck</button>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Tooltip -->
+<div id="tooltip"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const state = {
+    currentView: 'input',   // 'input' | 'loading' | 'results'
+    inputMode: 'type',      // 'type' | 'upload'
+    essayText: '',
+    markingResult: null,
+  };
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const views = {
+    input:   document.getElementById('view-input'),
+    loading: document.getElementById('view-loading'),
+    results: document.getElementById('view-results'),
+  };
+  const essayTextarea = document.getElementById('essay-textarea');
+  const ocrTextarea   = document.getElementById('ocr-textarea');
+  const ocrTextareaWrap = document.getElementById('ocr-textarea-wrap');
+  const ocrStatus     = document.getElementById('ocr-status');
+  const fileInput     = document.getElementById('file-input');
+  const dropZone      = document.getElementById('drop-zone');
+  const imagePreview  = document.getElementById('image-preview');
+  const imagePreviewWrap = document.getElementById('image-preview-wrap');
+  const btnMark       = document.getElementById('btn-mark');
+  const inputError    = document.getElementById('input-error');
+  const tooltip       = document.getElementById('tooltip');
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function showView(name) {
+    state.currentView = name;
+    Object.entries(views).forEach(([k, el]) => el.classList.toggle('active', k === name));
+  }
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.inputMode = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-panel').forEach(p =>
+        p.classList.toggle('active', p.id === `tab-${btn.dataset.tab}`)
+      );
+    });
+  });
+
+  // ── Image upload / drop ────────────────────────────────────────────────────
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleImageFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleImageFile(fileInput.files[0]); });
+
+  function handleImageFile(file) {
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = e => {
+      imagePreview.src = e.target.result;
+      imagePreviewWrap.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+
+    // OCR
+    ocrStatus.classList.add('visible');
+    ocrTextareaWrap.style.display = 'none';
+    btnMark.disabled = true;
+    showError('');
+
+    const fd = new FormData();
+    fd.append('image', file);
+
+    fetch('/ocr', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(data => {
+        ocrStatus.classList.remove('visible');
+        btnMark.disabled = false;
+        if (data.success) {
+          ocrTextarea.value = data.text;
+          ocrTextareaWrap.style.display = 'block';
+        } else {
+          showError('OCR failed: ' + data.error);
+        }
+      })
+      .catch(err => {
+        ocrStatus.classList.remove('visible');
+        btnMark.disabled = false;
+        showError('Network error during OCR: ' + err.message);
+      });
+  }
+
+  // ── Mark essay ─────────────────────────────────────────────────────────────
+  btnMark.addEventListener('click', () => {
+    const text = state.inputMode === 'type'
+      ? essayTextarea.value.trim()
+      : ocrTextarea.value.trim();
+
+    if (!text) { showError('Please enter or upload an essay first.'); return; }
+
+    state.essayText = text;
+    showError('');
+    showView('loading');
+
+    fetch('/mark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ essay: text }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          state.markingResult = data.result;
+          renderResults(data.result);
+          showView('results');
+        } else {
+          showView('input');
+          showError('Marking failed: ' + data.error);
+        }
+      })
+      .catch(err => {
+        showView('input');
+        showError('Network error: ' + err.message);
+      });
+  });
+
+  // ── Recheck ────────────────────────────────────────────────────────────────
+  document.getElementById('btn-recheck').addEventListener('click', () => {
+    state.inputMode = 'type';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'type'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-type'));
+    essayTextarea.value = state.essayText;
+    showView('input');
+  });
+
+  // ── Render results ─────────────────────────────────────────────────────────
+  function renderResults(result) {
+    // Scores
+    const c = result.scores.content;
+    const l = result.scores.language;
+    const t = result.scores.total;
+
+    document.getElementById('score-content').textContent  = c;
+    document.getElementById('score-language').textContent = l;
+    document.getElementById('score-total').textContent    = t;
+
+    // Colour badges by score percentage
+    colourBadge('badge-content',  c, 18);
+    colourBadge('badge-language', l, 18);
+    colourBadge('badge-total',    t, 36);
+
+    // Comment
+    document.getElementById('overall-comment').textContent = result.overall_comment || '';
+
+    // Highlighted essay
+    const intervals = buildIntervals(state.essayText, result.issues || []);
+    document.getElementById('essay-display').innerHTML = buildHighlightedHTML(state.essayText, intervals);
+
+    // Strengths
+    const sl = document.getElementById('strengths-list');
+    sl.innerHTML = '';
+    (result.strengths || []).forEach(s => {
+      const span = document.createElement('span');
+      span.className = 'tag tag-green';
+      span.textContent = s;
+      sl.appendChild(span);
+    });
+
+    // Improvements
+    const il = document.getElementById('improvements-list');
+    il.innerHTML = '';
+    (result.improvements || []).forEach(s => {
+      const span = document.createElement('span');
+      span.className = 'tag tag-orange';
+      span.textContent = s;
+      il.appendChild(span);
+    });
+  }
+
+  function colourBadge(id, score, max) {
+    const el = document.getElementById(id);
+    const pct = score / max;
+    el.className = 'score-badge ' + (pct >= 0.72 ? 'badge-content' : pct >= 0.5 ? 'badge-amber' : 'badge-red');
+    if (id === 'badge-language') el.style.background = pct >= 0.72 ? '#2563eb' : pct >= 0.5 ? '#d97706' : '#dc2626';
+    if (id === 'badge-total')    el.style.background = pct >= 0.72 ? '#7c3aed' : pct >= 0.5 ? '#d97706' : '#dc2626';
+  }
+
+  // ── Highlight algorithm ────────────────────────────────────────────────────
+  function findOccurrences(text, snippet) {
+    const out = [];
+    let start = 0;
+    while (true) {
+      const idx = text.indexOf(snippet, start);
+      if (idx === -1) break;
+      out.push({ start: idx, end: idx + snippet.length });
+      start = idx + 1;
+    }
+    return out;
+  }
+
+  function buildIntervals(text, issues) {
+    // Map start → {start, end, issues[]}
+    const map = new Map();
+
+    issues.forEach(issue => {
+      if (!issue.snippet) return;
+      const occurrences = findOccurrences(text, issue.snippet);
+      occurrences.forEach(({ start, end }) => {
+        const key = start;
+        if (!map.has(key)) map.set(key, { start, end, issues: [] });
+        map.get(key).issues.push(issue);
+      });
+    });
+
+    // Sort and merge overlapping intervals
+    const sorted = [...map.values()].sort((a, b) => a.start - b.start);
+    const merged = [];
+    for (const iv of sorted) {
+      if (merged.length && iv.start < merged[merged.length - 1].end) {
+        const last = merged[merged.length - 1];
+        last.end = Math.max(last.end, iv.end);
+        last.issues.push(...iv.issues);
+      } else {
+        merged.push({ ...iv, issues: [...iv.issues] });
+      }
+    }
+    return merged;
+  }
+
+  function escapeHTML(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function buildHighlightedHTML(text, intervals) {
+    let html = '';
+    let pos = 0;
+    let ivIdx = 0;
+
+    while (pos < text.length) {
+      const iv = intervals[ivIdx];
+      const nextBoundary = iv ? iv.start : text.length;
+
+      if (pos < nextBoundary) {
+        html += escapeHTML(text.slice(pos, nextBoundary)).replace(/\n/g, '<br>');
+        pos = nextBoundary;
+      }
+
+      if (iv && pos === iv.start) {
+        const type = iv.issues[0]?.type || 'language';
+        const issuesAttr = escapeHTML(JSON.stringify(iv.issues));
+        html += `<mark data-type="${type}" data-issues="${issuesAttr}">`;
+        html += escapeHTML(text.slice(iv.start, iv.end));
+        html += '</mark>';
+        pos = iv.end;
+        ivIdx++;
+      }
+    }
+    return html;
+  }
+
+  // ── Tooltip ────────────────────────────────────────────────────────────────
+  const essayDisplay = document.getElementById('essay-display');
+
+  essayDisplay.addEventListener('click', e => {
+    const mark = e.target.closest('mark');
+    if (!mark) { hideTooltip(); return; }
+
+    const issues = JSON.parse(mark.dataset.issues);
+    let html = '';
+    issues.forEach((issue, i) => {
+      if (i > 0) html += '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.15);margin:0.6rem 0;">';
+      const typeLabel = { logic: 'Logic', flow: 'Flow', language: 'Language', content: 'Content' }[issue.type] || issue.type;
+      const severityColour = { high: '#f87171', medium: '#fbbf24', low: '#86efac' }[issue.severity] || '#94a3b8';
+      html += `<div class="tip-type" style="color:${severityColour};">${typeLabel} · ${issue.severity}</div>`;
+      html += `<div class="tip-explanation">${escapeHTML(issue.explanation)}</div>`;
+      if (issue.suggestion) {
+        html += `<div class="tip-label">Suggestion:</div>`;
+        html += `<div class="tip-suggestion">${escapeHTML(issue.suggestion)}</div>`;
+      }
+    });
+    tooltip.innerHTML = html;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let tx = e.clientX + 12;
+    let ty = e.clientY + 12;
+
+    tooltip.style.display = 'block';
+    tooltip.style.left = '0';
+    tooltip.style.top = '0';
+
+    const tw = tooltip.offsetWidth;
+    const th = tooltip.offsetHeight;
+
+    if (tx + tw > vw - 8) tx = e.clientX - tw - 12;
+    if (ty + th > vh - 8) ty = e.clientY - th - 12;
+
+    tooltip.style.left = `${tx}px`;
+    tooltip.style.top = `${ty}px`;
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('mark') && !e.target.closest('#tooltip')) hideTooltip();
+  });
+
+  function hideTooltip() { tooltip.style.display = 'none'; }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function showError(msg) {
+    inputError.textContent = msg;
+    inputError.classList.toggle('visible', !!msg);
+  }
+</script>
+</body>
+</html>
